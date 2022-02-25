@@ -11,6 +11,31 @@
 #include <iostream>
 using namespace std;
 
+#define JSONGETITEM(json, item, itemName)					\
+	do{														\
+		item = cJSON_GetObjectItem(json, itemName);			\
+		if (!item || item->type == cJSON_NULL)				\
+			return;											\
+	} while (0);
+
+void Logic::init(WeChatBot * bot)
+{
+	bot_ = bot;
+	one_min_msg_count_map_timer_ = new QTimer(this);
+	QObject::connect(one_min_msg_count_map_timer_, SIGNAL(timeout()), this, SLOT(one_min_msg_count_map_timer_slot()));
+	//Ò»·ÖÖÓÖ´ĞĞÒ»´Î
+	one_min_msg_count_map_timer_->setInterval(1000 * 60);
+	one_min_msg_count_map_timer_->start();
+}
+
+void Logic::one_min_msg_count_map_timer_slot()
+{
+	for (auto & item : one_min_msg_count_map_)
+	{
+		item.second = 0;
+	}
+}
+
 QString Logic::get_id()
 {
 	return QDateTime::currentDateTime().toString("yyyyMMddhhmmss");
@@ -151,7 +176,8 @@ QString Logic::get_chatroom_memberlist()
 
 void Logic::handle_wxuser_list(cJSON * json)
 {
-	cJSON * content = cJSON_GetObjectItem(json, "content");
+	cJSON * content;
+	JSONGETITEM(json, content, "content");
 	int arr_size = cJSON_GetArraySize(content);
 	cJSON * item;
 	vector<cJSON*> friends;
@@ -164,21 +190,21 @@ void Logic::handle_wxuser_list(cJSON * json)
 			continue;
 		QString wxid = val->valuestring;
 		if (wxid.startsWith("wxid"))
-		{//æ˜¯å¾®ä¿¡å¥½å‹
+		{//ÊÇÎ¢ĞÅºÃÓÑ
 			//qDebug() << "friend: " << cJSON_GetObjectItem(item, "name")->valuestring;
 			friends.push_back(item);
 		}
 		else if (wxid.endsWith("@chatroom"))
-		{//æ˜¯ç¾¤èŠ
+		{//ÊÇÈºÁÄ
 			//qDebug() << "chatroom: " << cJSON_GetObjectItem(item, "name")->valuestring;
 			chatrooms.push_back(item);
 		}
 		else if (wxid.startsWith("gh"))
-		{//å…¬ä¼—å·
+		{//¹«ÖÚºÅ
 			//qDebug() << "ps: " << cJSON_GetObjectItem(item, "name")->valuestring;
 		}
 		else
-		{//å…¶ä»–ä¸€å¾‹ä¸ç®¡
+		{//ÆäËûÒ»ÂÉ²»¹Ü
 		}
 	}
 
@@ -187,10 +213,15 @@ void Logic::handle_wxuser_list(cJSON * json)
 
 void Logic::handle_new_member(cJSON * json)
 {
-	cJSON * content = cJSON_GetObjectItem(json, "content");
-	std::regex pattern(".*?é‚€è¯·\"(.*?)\"åŠ å…¥äº†ç¾¤èŠ");
-	string text = UTF8ToGBK(cJSON_GetObjectItem(content, "content")->valuestring);
-	string wxid = cJSON_GetObjectItem(content, "id1")->valuestring;
+	cJSON * content;
+	JSONGETITEM(json, content, "content");
+	std::regex pattern(".*?ÑûÇë\"(.*?)\"¼ÓÈëÁËÈºÁÄ");
+	cJSON * text_json_obj;
+	JSONGETITEM(content, text_json_obj, "content");
+	string text = UTF8ToGBK(text_json_obj->valuestring);
+	cJSON * id1_json_obj;
+	JSONGETITEM(content, id1_json_obj, "id1");
+	string wxid = id1_json_obj->valuestring;
 	smatch results;
 	if (!regex_search(text, results, pattern))
 		return;
@@ -198,8 +229,8 @@ void Logic::handle_new_member(cJSON * json)
 	string nickname = GBKToUTF8(results[1].str().c_str());
 	auto all_regs_iter = instance_->all_chatoom_regs_.find(wxid + "_nm");
 	if (all_regs_iter == instance_->all_chatoom_regs_.end())
-	{//ç†è®ºä¸Šä¸å¯èƒ½å‘ç”Ÿ
-		QMessageBox::information(NULL, QString::fromLocal8Bit("è­¦å‘Š"), QString::fromLocal8Bit("ç¨‹åºå‡ºç°å¼‚å¸¸ï¼Œè¯·é‡å¯"));
+	{//ÀíÂÛÉÏ²»¿ÉÄÜ·¢Éú
+		//QMessageBox::information(NULL, QString::fromLocal8Bit("¾¯¸æ"), QString::fromLocal8Bit("³ÌĞò³öÏÖÒì³££¬ÇëÖØÆô"));
 		return;
 	}
 	for (auto & reg : all_regs_iter->second)
@@ -235,52 +266,85 @@ void Logic::handle_new_member(cJSON * json)
 
 void Logic::handle_all_member_list(cJSON * json)
 {
-	cJSON * content = cJSON_GetObjectItem(json, "content");
+	cJSON * content;
+	JSONGETITEM(json, content, "content");
 	int count = cJSON_GetArraySize(content);
 	for (int i = 0; i < count; ++i)
 	{
 		cJSON * item = cJSON_GetArrayItem(content, i);
-		string roomid = cJSON_GetObjectItem(item, "room_id")->valuestring;
-		cJSON * member_list = cJSON_GetObjectItem(item, "member");
-		int member_list_count = cJSON_GetArraySize(member_list);
-		vector<unordered_map<string, string>> all_one_item;
+		cJSON * room_id_json_obj;
+		JSONGETITEM(item, room_id_json_obj, "room_id");
+		string roomid = room_id_json_obj->valuestring;
+		cJSON * member_list_json_obj;
+		JSONGETITEM(item, member_list_json_obj, "member");
+		int member_list_count = cJSON_GetArraySize(member_list_json_obj);
+		//vector<unordered_map<string, int>> all_one_item;
 		for (int j = 0; j < member_list_count; ++j)
 		{
-			cJSON * mem_item = cJSON_GetArrayItem(member_list, j);
-			unordered_map<string, string> one_item;
-			one_item[mem_item->valuestring] = "";
-			all_one_item.push_back(one_item);
+			cJSON * mem_item = cJSON_GetArrayItem(member_list_json_obj, j);
+			//unordered_map<string, int> one_item;
+			string key = mem_item->valuestring;
+			//one_item[key] = 0;
+			//all_one_item.push_back(one_item);*/
+
+			one_min_msg_count_map_[key] = 0;
 		}
 
-		all_chatroom_member_[roomid] = all_one_item;
+		//all_chatroom_member_[roomid] = all_one_item;
 	}
 }
 
 void Logic::handle_txt_msg(cJSON * json)
 {
-	cJSON * content = cJSON_GetObjectItem(json, "content");
-	string wxid = cJSON_GetObjectItem(json, "wxid")->valuestring;
+	cJSON * content;
+	JSONGETITEM(json, content, "content");
+	cJSON * wxidObj;
+	JSONGETITEM(json, wxidObj, "wxid");
+	string wxid = wxidObj->valuestring;
+	if (wxid.length() == 0 || wxid.empty())
+		return;
+	cJSON * id1_json_obj;
 	regex reg("\\d{11}@chatroom");
 	if (regex_match(wxid, reg))
-	{//æ˜¯ç¾¤èŠ
+	{//ÊÇÈºÁÄ
 		auto all_regs_iter = instance_->all_chatoom_regs_.find(wxid);
 		if (all_regs_iter == instance_->all_chatoom_regs_.end())
-		{//ç†è®ºä¸Šä¸å¯èƒ½å‘ç”Ÿ
-			QMessageBox::information(NULL, QString::fromLocal8Bit("è­¦å‘Š"), QString::fromLocal8Bit("ç¨‹åºå‡ºç°å¼‚å¸¸ï¼Œè¯·é‡å¯"));
+		{//ÀíÂÛÉÏ²»¿ÉÄÜ·¢Éú
+			//QMessageBox::information(NULL, QString::fromLocal8Bit("¾¯¸æ"), QString::fromLocal8Bit("³ÌĞò³öÏÖÒì³££¬ÇëÖØÆô"));
 			return;
 		}
+		
 		for (auto & reg : all_regs_iter->second)
 		{
 			string regex_str = reg.find("regex")->second;
 			if (regex_match(content->valuestring, std::regex(regex_str)))
-			{//åŒ¹é…åˆ°äº†
+			{//Æ¥Åäµ½ÁË
+				JSONGETITEM(json, id1_json_obj, "id1");
+				const char * id1 = id1_json_obj->valuestring;
+				if (one_min_msg_count_map_.find(id1) != one_min_msg_count_map_.end())
+				{
+					if (one_min_msg_count_map_[id1] > bot_->ui.limit_msg_count->text().toInt())
+					{
+						//´óÓÚÏŞÖÆ¾ÍµÈ´ıÏÂÒ»·ÖÖÓÔÙËµ
+						return;
+					}
+					else
+					{
+						one_min_msg_count_map_[id1] ++;
+					}
+				}
+				else
+				{
+					return;
+				}
+
+				qDebug() << id1 << " === " << one_min_msg_count_map_[id1];
 				string reply = reg.find("reply")->second;
 				bool is_file = reg.find("is_file")->second == "1" ? true : false;
 				bool is_at = reg.find("is_at")->second == "1" ? true : false;
 
 				if (is_at)
 				{
-					const char * id1 = cJSON_GetObjectItem(json, "id1")->valuestring;
 					if (is_file)
 					{
 						instance_->send_msg(send_at_msg(id1, wxid.c_str(), "", "").toStdString());
@@ -298,7 +362,7 @@ void Logic::handle_txt_msg(cJSON * json)
 						instance_->send_msg(send_pic_msg(wxid.c_str(), reply.c_str()).toStdString());
 					}
 					else
-					{
+					{ 
 						instance_->send_msg(send_txt_msg(wxid.c_str(), reply.c_str()).toStdString());
 					}
 				}
@@ -306,22 +370,23 @@ void Logic::handle_txt_msg(cJSON * json)
 		}
 	}
 	else
-	{//æ˜¯ç§èŠ
+	{//ÊÇË½ÁÄ
 		my_wxid = wxid;
 		auto all_regs_iter = instance_->all_friend_regs_.find(wxid);
 		if (all_regs_iter == instance_->all_friend_regs_.end())
 		{
-			//å…¬ä¼—å·ä¹‹ç±»çš„ä¹Ÿä¼šè§¦å‘ï¼Œä½†æ˜¯ä¸éœ€è¦å¤„ç†
-			//QMessageBox::information(NULL, QString::fromLocal8Bit("è­¦å‘Š"), QString::fromLocal8Bit("ç¨‹åºå‡ºç°å¼‚å¸¸ï¼Œè¯·é‡å¯"));
+			//³ıÁËË½ÁÄÒ²ÓĞ¹«ÖÚºÅÖ®ÀàµÄÒ²»á´¥·¢
+			//QMessageBox::information(NULL, QString::fromLocal8Bit("¾¯¸æ"), QString::fromLocal8Bit("³ÌĞò³öÏÖÒì³££¬ÇëÖØÆô"));
 			return;
 		}
 		for (auto & reg : all_regs_iter->second)
 		{
 			string regex_str = reg.find("regex")->second;
 			if (regex_match(content->valuestring, std::regex(regex_str)))
-			{//åŒ¹é…åˆ°äº†
+			{//Æ¥Åäµ½ÁË
 				string reply = reg.find("reply")->second;
 				bool is_file = reg.find("is_file")->second == "1" ? true : false;
+				JSONGETITEM(json, id1_json_obj, "id1");
 				const char * id1 = cJSON_GetObjectItem(json, "id1")->valuestring;
 				if (is_file)
 				{
@@ -352,7 +417,7 @@ void Logic::dispatch_msg(cJSON * json)
 	case USER_LIST:
 		handle_wxuser_list(json);
 		break;
-	case AGREE_TO_FRIEND_REQUEST:	//æ–°å¥½å‹æˆ–æ–°ç¾¤å‹
+	case AGREE_TO_FRIEND_REQUEST:	//ĞÂºÃÓÑ»òĞÂÈºÓÑ
 		handle_new_member(json);
 		break;
 	case CHATROOM_MEMBER:

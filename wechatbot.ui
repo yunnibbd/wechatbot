@@ -122,7 +122,7 @@ background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgb
       <x>20</x>
       <y>51</y>
       <width>590</width>
-      <height>690</height>
+      <height>491</height>
      </rect>
     </property>
     <property name="styleSheet">
@@ -385,6 +385,63 @@ border-radius: 5px;</string>
     </property>
     <property name="text">
      <string>清除</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="min_Button">
+    <property name="geometry">
+     <rect>
+      <x>940</x>
+      <y>10</y>
+      <width>31</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>-</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_4">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>560</y>
+      <width>341</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">font: 14pt &quot;黑体&quot;;</string>
+    </property>
+    <property name="text">
+     <string>群聊内一分钟对同一人回复的最大限制</string>
+    </property>
+   </widget>
+   <widget class="QSpinBox" name="limit_msg_count">
+    <property name="geometry">
+     <rect>
+      <x>370</x>
+      <y>556</y>
+      <width>101</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">font: 15pt &quot;ADMUI3Lg&quot;;</string>
+    </property>
+    <property name="specialValueText">
+     <string/>
+    </property>
+    <property name="minimum">
+     <number>1</number>
+    </property>
+    <property name="maximum">
+     <number>10000</number>
+    </property>
+    <property name="value">
+     <number>60</number>
+    </property>
+    <property name="displayIntegerBase">
+     <number>10</number>
     </property>
    </widget>
   </widget>

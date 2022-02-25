@@ -2,7 +2,9 @@
 #include <QObject>
 #include <vector>
 #include <string>
+#include <set>
 #include <unordered_map>
+#include <QTimer>
 #include "cJSON.h"
 
 class WeChatBot;
@@ -36,12 +38,18 @@ class Logic : public QObject
 signals:
 	void update_wxuser_list(std::vector<cJSON *> items, std::vector<cJSON *> items2);
 	void send_msg(std::string msg);
+
+public slots:
+	void one_min_msg_count_map_timer_slot();
+
 public:
 	static Logic & Instance()
 	{
 		static Logic loc;
 		return loc;
 	}
+
+	void init(WeChatBot * bot);
 
 	/**
 	 * @brief 获得年月日时分秒的时间格式作为每次通信的id
@@ -156,6 +164,8 @@ private:
 	{
 	}
 
+	WeChatBot * bot_;
+
 	//用于获取群聊和好友规则
 	WeChatBot * instance_;
 
@@ -163,7 +173,18 @@ private:
 	std::string my_wxid = "";
 
 	//存储所有的群列表成员信息
-	std::unordered_map<std::string,
-		std::vector<std::unordered_map<std::string, std::string>>
+	std::unordered_map<
+		std::string,				//群聊id
+		std::vector<					//群聊中的一个人	
+			std::unordered_map<
+				std::string,
+				int
+			>
+		>
 	> all_chatroom_member_;
+
+	std::map<std::string, int> one_min_msg_count_map_;
+
+	//一分钟定时更新群成员说话信息的定时器
+	QTimer * one_min_msg_count_map_timer_ = nullptr;
 };

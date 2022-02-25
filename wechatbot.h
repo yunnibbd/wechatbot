@@ -19,6 +19,8 @@ class WeChatBot : public QWidget
 	Q_OBJECT
 
 public:
+	friend class Logic;
+
 	WeChatBot(QWidget *parent = Q_NULLPTR);
 
 	void mouseMoveEvent(QMouseEvent *ev) override;
@@ -79,6 +81,13 @@ public slots:
 	 * @return
 	 */
 	void on_connect_Button_clicked();
+
+	/**
+	 * @brief 最小化按钮点击事件
+	 * @param
+	 * @return
+	 */
+	void on_min_Button_clicked();
 
 	/**
 	 * @brief ws客户端连接成功回调

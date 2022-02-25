@@ -4,6 +4,7 @@
 #include "mask.h"
 #include "addreg.h"
 #include <QMouseEvent>
+#include <QSystemTrayIcon>
 #include <QDebug>
 #include <QDir>
 #include <QDateTime>
@@ -14,6 +15,7 @@
 #include <QMessageBox>
 #include <iostream>
 #include <regex>
+#include <windows.h>
 using namespace std;
 
 WeChatBot::WeChatBot(QWidget *parent)
@@ -50,6 +52,9 @@ WeChatBot::WeChatBot(QWidget *parent)
 
 	get_wxuser_timer_ = new QTimer(this);
 	QObject::connect(get_wxuser_timer_, SIGNAL(timeout()), this, SLOT(get_wxuser_timer_slot()));
+
+	//初始化logic
+	Logic::Instance().init(this);
 }
 
 //当前界面是否被鼠标左键一直单击
@@ -163,6 +168,13 @@ void WeChatBot::on_connect_Button_clicked()
 		ws_client_->open(QUrl(url));
 		show_log(QString::fromLocal8Bit("开始连接") + server_ip_ + ":" + QString::number(server_port_));
 	}
+}
+
+void WeChatBot::on_min_Button_clicked()
+{
+	HWND hw1 = ::FindWindowA(NULL, "WeChatBot");//获取程序句柄
+	ShowWindow(hw1, SW_MINIMIZE);//程序最小化到任务栏
+	//ShowWindow(hw1, SW_RESTORE);//程序恢复到主界面
 }
 
 void WeChatBot::ws_client_connected_cb()

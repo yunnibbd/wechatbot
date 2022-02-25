@@ -115,7 +115,7 @@ void AddReg::on_sync_file_pushButton_clicked()
 {
 	QSettings iniFile(QDir::currentPath() + "/wechat.ini", QSettings::IniFormat);
 	iniFile.setIniCodec(QTextCodec::codecForName("utf-8"));
-
+	
 	//保存该群聊回复规则
 	int reply_count = ui.tableWidget->rowCount();
 	do 
